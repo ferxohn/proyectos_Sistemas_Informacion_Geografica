@@ -63,18 +63,24 @@ tm_shape(mar_caribe.osm) +
   tm_shape(pais) +
   tm_polygons(col = "#f2f2f2", border.alpha = 0.5) +
   tm_shape(zonas_potenciales) +
-  tm_lines(col = "blue", lwd = 4) +
+  tm_lines(col = "blue",
+           lwd = 4) +
+  tm_compass(
+    type = "rose",
+    text.size = 1,
+    size = 2,
+    position = c("right", "top")
+  ) +
   tm_layout(
     frame = TRUE,
     frame.double.line = TRUE,
     asp = NA,
-    compass.type = "arrow",
     main.title = "Zonas con potencial para\ninstalar tecnología OTEC",
     main.title.size = 1,
     main.title.position = c("center", "top"),
   ) +
   tm_credits(
-    "Por: Fernando Gómez Perera",
+    "Autor: Fernando Gómez Perera\nFuentes: NOAA (s.f.)",
     size = 1,
     align = "right",
     position = c("right", "bottom")
