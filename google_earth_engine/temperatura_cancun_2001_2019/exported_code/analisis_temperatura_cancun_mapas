@@ -1,0 +1,175 @@
+/**** Start of imports. If edited, may not auto-convert in the playground. ****/
+var cancun_geometry = 
+    /* color: #0b4a8b */
+    /* shown: false */
+    ee.Geometry.Polygon(
+        [[[-86.9888928724973, 21.238330006870573],
+          [-86.9888928724973, 20.984669019255062],
+          [-86.68539555804418, 20.984669019255062],
+          [-86.68539555804418, 21.238330006870573]]]);
+/***** End of imports. If edited, may not auto-convert in the playground. *****/
+var landsat = require('users/fernandogp/clases_sig:procesa_imagenes');
+var exported = require('users/fernandogp/practica1_sig:exports');
+var temp_collections = require('users/fernandogp/practica1_sig:temp_collections');
+
+/** Parámetros iniciales **/
+// Mapa de Cancún.
+var map_image = ee.Image(exported.map_image);
+// Colecciones de imágenes.
+var temp_years = ee.Dictionary(temp_collections.temp_years);
+
+print(temp_years);
+
+// División de las colecciones de imágenes.
+var city_images = ee.Dictionary(ee.Dictionary(ee.Dictionary(temp_years.get('masked')).get('images_mean')).get('city'));
+var veg_images = ee.Dictionary(ee.Dictionary(ee.Dictionary(temp_years.get('masked')).get('images_mean')).get('veg'));
+var water_images = ee.Dictionary(ee.Dictionary(ee.Dictionary(temp_years.get('masked')).get('images_mean')).get('water'));
+
+// Parámetros visuales para el mapa de Cancún.
+var visParams = {
+  min: 0,
+  max: 3000,
+  gamma: 1.4,
+  bands: ['B4', 'B3', 'B2'],
+};
+
+// Parámetros visuales para la colección de imágenes de temperatura en tierra.
+var landSurfaceTemperatureVis = {
+  min: 13000.0,
+  max: 16500.0,
+  palette: [
+    '040274', '040281', '0502a3', '0502b8', '0502ce', '0502e6',
+    '0602ff', '235cb1', '307ef3', '269db1', '30c8e2', '32d3ef',
+    '3be285', '3ff38f', '86e26f', '3ae237', 'b5e22e', 'd6e21f',
+    'fff705', 'ffd611', 'ffb613', 'ff8b13', 'ff6e08', 'ff500d',
+    'ff0000', 'de0101', 'c21301', 'a71001', '911003'
+  ],
+};
+
+// Parámetros visuales para la colección de imágenes de temperatura en mar-laguna.
+var seaSurfaceTemperatureVis = {
+  min: 0.0,
+  max: 2500.0,
+  palette: [
+    '030d81', '0519ff', '05e8ff', '11ff01', 'fbff01', 'ff9901', 'ff0000',
+    'ad0000'
+  ],
+};
+
+// Centro del mapa.
+Map.setCenter(-86.84, 21.11, 11);
+
+// Visualización de los mapa sobre Cancún.
+Map.addLayer(map_image, visParams, "Mapa de Cancún (2019)");
+exported.addLayer_dict_Image(city_images, '2001', landSurfaceTemperatureVis, 'Ciudad');
+exported.addLayer_dict_Image(veg_images, '2001', landSurfaceTemperatureVis, 'Vegetación');
+exported.addLayer_dict_Image(water_images, '2001', seaSurfaceTemperatureVis, 'Mar-Laguna');
+exported.addLayer_dict_Image(city_images, '2002', landSurfaceTemperatureVis, 'Ciudad');
+exported.addLayer_dict_Image(veg_images, '2002', landSurfaceTemperatureVis, 'Vegetación');
+exported.addLayer_dict_Image(water_images, '2002', seaSurfaceTemperatureVis, 'Mar-Laguna');
+exported.addLayer_dict_Image(city_images, '2003', landSurfaceTemperatureVis, 'Ciudad');
+exported.addLayer_dict_Image(veg_images, '2003', landSurfaceTemperatureVis, 'Vegetación');
+exported.addLayer_dict_Image(water_images, '2003', seaSurfaceTemperatureVis, 'Mar-Laguna');
+exported.addLayer_dict_Image(city_images, '2004', landSurfaceTemperatureVis, 'Ciudad');
+exported.addLayer_dict_Image(veg_images, '2004', landSurfaceTemperatureVis, 'Vegetación');
+exported.addLayer_dict_Image(water_images, '2004', seaSurfaceTemperatureVis, 'Mar-Laguna');
+exported.addLayer_dict_Image(city_images, '2005', landSurfaceTemperatureVis, 'Ciudad');
+exported.addLayer_dict_Image(veg_images, '2005', landSurfaceTemperatureVis, 'Vegetación');
+exported.addLayer_dict_Image(water_images, '2005', seaSurfaceTemperatureVis, 'Mar-Laguna');
+exported.addLayer_dict_Image(city_images, '2006', landSurfaceTemperatureVis, 'Ciudad');
+exported.addLayer_dict_Image(veg_images, '2006', landSurfaceTemperatureVis, 'Vegetación');
+exported.addLayer_dict_Image(water_images, '2006', seaSurfaceTemperatureVis, 'Mar-Laguna');
+exported.addLayer_dict_Image(city_images, '2007', landSurfaceTemperatureVis, 'Ciudad');
+exported.addLayer_dict_Image(veg_images, '2007', landSurfaceTemperatureVis, 'Vegetación');
+exported.addLayer_dict_Image(water_images, '2007', seaSurfaceTemperatureVis, 'Mar-Laguna');
+exported.addLayer_dict_Image(city_images, '2008', landSurfaceTemperatureVis, 'Ciudad');
+exported.addLayer_dict_Image(veg_images, '2008', landSurfaceTemperatureVis, 'Vegetación');
+exported.addLayer_dict_Image(water_images, '2008', seaSurfaceTemperatureVis, 'Mar-Laguna');
+exported.addLayer_dict_Image(city_images, '2009', landSurfaceTemperatureVis, 'Ciudad');
+exported.addLayer_dict_Image(veg_images, '2009', landSurfaceTemperatureVis, 'Vegetación');
+exported.addLayer_dict_Image(water_images, '2009', seaSurfaceTemperatureVis, 'Mar-Laguna');
+exported.addLayer_dict_Image(city_images, '2010', landSurfaceTemperatureVis, 'Ciudad');
+exported.addLayer_dict_Image(veg_images, '2010', landSurfaceTemperatureVis, 'Vegetación');
+exported.addLayer_dict_Image(water_images, '2010', seaSurfaceTemperatureVis, 'Mar-Laguna');
+exported.addLayer_dict_Image(city_images, '2011', landSurfaceTemperatureVis, 'Ciudad');
+exported.addLayer_dict_Image(veg_images, '2011', landSurfaceTemperatureVis, 'Vegetación');
+exported.addLayer_dict_Image(water_images, '2011', seaSurfaceTemperatureVis, 'Mar-Laguna');
+exported.addLayer_dict_Image(city_images, '2012', landSurfaceTemperatureVis, 'Ciudad');
+exported.addLayer_dict_Image(veg_images, '2012', landSurfaceTemperatureVis, 'Vegetación');
+exported.addLayer_dict_Image(water_images, '2012', seaSurfaceTemperatureVis, 'Mar-Laguna');
+exported.addLayer_dict_Image(city_images, '2013', landSurfaceTemperatureVis, 'Ciudad');
+exported.addLayer_dict_Image(veg_images, '2013', landSurfaceTemperatureVis, 'Vegetación');
+exported.addLayer_dict_Image(water_images, '2013', seaSurfaceTemperatureVis, 'Mar-Laguna');
+exported.addLayer_dict_Image(city_images, '2014', landSurfaceTemperatureVis, 'Ciudad');
+exported.addLayer_dict_Image(veg_images, '2014', landSurfaceTemperatureVis, 'Vegetación');
+exported.addLayer_dict_Image(water_images, '2014', seaSurfaceTemperatureVis, 'Mar-Laguna');
+exported.addLayer_dict_Image(city_images, '2015', landSurfaceTemperatureVis, 'Ciudad');
+exported.addLayer_dict_Image(veg_images, '2015', landSurfaceTemperatureVis, 'Vegetación');
+exported.addLayer_dict_Image(city_images, '2016', landSurfaceTemperatureVis, 'Ciudad');
+exported.addLayer_dict_Image(veg_images, '2016', landSurfaceTemperatureVis, 'Vegetación');
+exported.addLayer_dict_Image(city_images, '2017', landSurfaceTemperatureVis, 'Ciudad');
+exported.addLayer_dict_Image(veg_images, '2017', landSurfaceTemperatureVis, 'Vegetación');
+exported.addLayer_dict_Image(city_images, '2018', landSurfaceTemperatureVis, 'Ciudad');
+exported.addLayer_dict_Image(veg_images, '2018', landSurfaceTemperatureVis, 'Vegetación');
+exported.addLayer_dict_Image(city_images, '2019', landSurfaceTemperatureVis, 'Ciudad');
+exported.addLayer_dict_Image(veg_images, '2019', landSurfaceTemperatureVis, 'Vegetación');
+
+/* Exportar imágenes por año */
+
+// Ciudad.
+// exported.export_image(city_images, '2001', 'city_2001', 'practica_1_sig/city_images');
+// exported.export_image(city_images, '2002', 'city_2002', 'practica_1_sig/city_images');
+// exported.export_image(city_images, '2003', 'city_2003', 'practica_1_sig/city_images');
+// exported.export_image(city_images, '2004', 'city_2004', 'practica_1_sig/city_images');
+// exported.export_image(city_images, '2005', 'city_2005', 'practica_1_sig/city_images');
+// exported.export_image(city_images, '2006', 'city_2006', 'practica_1_sig/city_images');
+// exported.export_image(city_images, '2007', 'city_2007', 'practica_1_sig/city_images');
+// exported.export_image(city_images, '2008', 'city_2008', 'practica_1_sig/city_images');
+// exported.export_image(city_images, '2009', 'city_2009', 'practica_1_sig/city_images');
+// exported.export_image(city_images, '2010', 'city_2010', 'practica_1_sig/city_images');
+// exported.export_image(city_images, '2011', 'city_2011', 'practica_1_sig/city_images');
+// exported.export_image(city_images, '2012', 'city_2012', 'practica_1_sig/city_images');
+// exported.export_image(city_images, '2013', 'city_2013', 'practica_1_sig/city_images');
+// exported.export_image(city_images, '2014', 'city_2014', 'practica_1_sig/city_images');
+// exported.export_image(city_images, '2015', 'city_2015', 'practica_1_sig/city_images');
+// exported.export_image(city_images, '2016', 'city_2016', 'practica_1_sig/city_images');
+// exported.export_image(city_images, '2017', 'city_2017', 'practica_1_sig/city_images');
+// exported.export_image(city_images, '2018', 'city_2018', 'practica_1_sig/city_images');
+// exported.export_image(city_images, '2019', 'city_2019', 'practica_1_sig/city_images');
+
+// Vegetación.
+// exported.export_image(veg_images, '2001', 'veg_2001', 'practica_1_sig/veg_images');
+// exported.export_image(veg_images, '2002', 'veg_2002', 'practica_1_sig/veg_images');
+// exported.export_image(veg_images, '2003', 'veg_2003', 'practica_1_sig/veg_images');
+// exported.export_image(veg_images, '2004', 'veg_2004', 'practica_1_sig/veg_images');
+// exported.export_image(veg_images, '2005', 'veg_2005', 'practica_1_sig/veg_images');
+// exported.export_image(veg_images, '2006', 'veg_2006', 'practica_1_sig/veg_images');
+// exported.export_image(veg_images, '2007', 'veg_2007', 'practica_1_sig/veg_images');
+// exported.export_image(veg_images, '2008', 'veg_2008', 'practica_1_sig/veg_images');
+// exported.export_image(veg_images, '2009', 'veg_2009', 'practica_1_sig/veg_images');
+// exported.export_image(veg_images, '2010', 'veg_2010', 'practica_1_sig/veg_images');
+// exported.export_image(veg_images, '2011', 'veg_2011', 'practica_1_sig/veg_images');
+// exported.export_image(veg_images, '2012', 'veg_2012', 'practica_1_sig/veg_images');
+// exported.export_image(veg_images, '2013', 'veg_2013', 'practica_1_sig/veg_images');
+// exported.export_image(veg_images, '2014', 'veg_2014', 'practica_1_sig/veg_images');
+// exported.export_image(veg_images, '2015', 'veg_2015', 'practica_1_sig/veg_images');
+// exported.export_image(veg_images, '2016', 'veg_2016', 'practica_1_sig/veg_images');
+// exported.export_image(veg_images, '2017', 'veg_2017', 'practica_1_sig/veg_images');
+// exported.export_image(veg_images, '2018', 'veg_2018', 'practica_1_sig/veg_images');
+// exported.export_image(veg_images, '2019', 'veg_2019', 'practica_1_sig/veg_images');
+
+// Mar-Laguna.
+// exported.export_image(water_images, '2001', 'water_2001', 'practica_1_sig/water_images');
+// exported.export_image(water_images, '2002', 'water_2002', 'practica_1_sig/water_images');
+// exported.export_image(water_images, '2003', 'water_2003', 'practica_1_sig/water_images');
+// exported.export_image(water_images, '2004', 'water_2004', 'practica_1_sig/water_images');
+// exported.export_image(water_images, '2005', 'water_2005', 'practica_1_sig/water_images');
+// exported.export_image(water_images, '2006', 'water_2006', 'practica_1_sig/water_images');
+// exported.export_image(water_images, '2007', 'water_2007', 'practica_1_sig/water_images');
+// exported.export_image(water_images, '2008', 'water_2008', 'practica_1_sig/water_images');
+// exported.export_image(water_images, '2009', 'water_2009', 'practica_1_sig/water_images');
+// exported.export_image(water_images, '2010', 'water_2010', 'practica_1_sig/water_images');
+// exported.export_image(water_images, '2011', 'water_2011', 'practica_1_sig/water_images');
+// exported.export_image(water_images, '2012', 'water_2012', 'practica_1_sig/water_images');
+// exported.export_image(water_images, '2013', 'water_2013', 'practica_1_sig/water_images');
+// exported.export_image(water_images, '2014', 'water_2014', 'practica_1_sig/water_images');

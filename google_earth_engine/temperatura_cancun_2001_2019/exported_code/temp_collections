@@ -1,0 +1,73 @@
+var exported = require('users/fernandogp/practica1_sig:exports');
+
+/* Obtención de las colecciones de imágenes de temperatura*/
+// Obtención de la colección de imágenes de temperatura de MODIS en tierra sobre Cancún del 2001 al 2019.
+var temp_land_years = ee.Dictionary({
+  2001: ee.ImageCollection(exported.temp_land_collection('2001')),
+  2002: ee.ImageCollection(exported.temp_land_collection('2002')),
+  2003: ee.ImageCollection(exported.temp_land_collection('2003')),
+  2004: ee.ImageCollection(exported.temp_land_collection('2004')),
+  2005: ee.ImageCollection(exported.temp_land_collection('2005')),
+  2006: ee.ImageCollection(exported.temp_land_collection('2006')),
+  2007: ee.ImageCollection(exported.temp_land_collection('2007')),
+  2008: ee.ImageCollection(exported.temp_land_collection('2008')),
+  2009: ee.ImageCollection(exported.temp_land_collection('2009')),
+  2010: ee.ImageCollection(exported.temp_land_collection('2010')),
+  2011: ee.ImageCollection(exported.temp_land_collection('2011')),
+  2012: ee.ImageCollection(exported.temp_land_collection('2012')),
+  2013: ee.ImageCollection(exported.temp_land_collection('2013')),
+  2014: ee.ImageCollection(exported.temp_land_collection('2014')),
+  2015: ee.ImageCollection(exported.temp_land_collection('2015')),
+  2016: ee.ImageCollection(exported.temp_land_collection('2016')),
+  2017: ee.ImageCollection(exported.temp_land_collection('2017')),
+  2018: ee.ImageCollection(exported.temp_land_collection('2018')),
+  2019: ee.ImageCollection(exported.temp_land_collection('2019'))
+});
+
+// Obtención de la colección de imágenes de temperatura de NOAA en mar-laguna de Cancún del 2001 al 2019.
+var temp_ocean_years = ee.Dictionary({
+  2001: ee.ImageCollection(exported.temp_water_collection('2001')),
+  2002: ee.ImageCollection(exported.temp_water_collection('2002')),
+  2003: ee.ImageCollection(exported.temp_water_collection('2003')),
+  2004: ee.ImageCollection(exported.temp_water_collection('2004')),
+  2005: ee.ImageCollection(exported.temp_water_collection('2005')),
+  2006: ee.ImageCollection(exported.temp_water_collection('2006')),
+  2007: ee.ImageCollection(exported.temp_water_collection('2007')),
+  2008: ee.ImageCollection(exported.temp_water_collection('2008')),
+  2009: ee.ImageCollection(exported.temp_water_collection('2009')),
+  2010: ee.ImageCollection(exported.temp_water_collection('2010')),
+  2011: ee.ImageCollection(exported.temp_water_collection('2011')),
+  2012: ee.ImageCollection(exported.temp_water_collection('2012')),
+  2013: ee.ImageCollection(exported.temp_water_collection('2013')),
+  2014: ee.ImageCollection(exported.temp_water_collection('2014'))
+});
+
+// Enmascaramiento para diferenciar los grupos.
+var temp_city_years = temp_land_years.map(exported.mask_dict_city);
+var temp_city_years_mean = temp_land_years.map(exported.mask_dict_city_mean);
+var temp_veg_years = temp_land_years.map(exported.mask_dict_veg);
+var temp_veg_years_mean = temp_land_years.map(exported.mask_dict_veg_mean);
+var temp_water_years = temp_ocean_years.map(exported.mask_dict_water);
+var temp_water_years_mean = temp_ocean_years.map(exported.mask_dict_water_mean);
+
+// Objetos a exportar.
+exports.temp_years = ee.Dictionary({
+  original: {
+    collections: {
+      land: temp_land_years,
+      water: temp_water_years
+    }
+  },
+  masked: {
+    collections: {
+      city: temp_city_years,
+      veg: temp_veg_years,
+      water: temp_water_years,
+    },
+    images_mean: {
+      city: temp_city_years_mean,
+      veg: temp_veg_years_mean,
+      water: temp_water_years_mean,
+    }
+  }
+});

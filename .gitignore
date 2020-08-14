@@ -4,3 +4,5 @@
 .Ruserdata
 curvas_nivel/
 *.pdf
+*.docx
+!word-styles-reference-*.docx
