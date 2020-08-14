@@ -1,0 +1,166 @@
+---
+title: 'Práctica 2: Clasificación del uso de suelo en Cancún y sus alrededores con Google Earth Engine'
+author: "Por: Fernando Gómez Perera"
+date: "21 de abril del 2020"
+output:
+  word_document:
+    reference_docx: word-styles-reference-04.docx
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = FALSE, message = FALSE, warning = FALSE)
+```
+
+El objetivo de esta práctica es explorar algoritmos de aprendizaje supervisado dentro de Google Earth Engine para clasificar el uso de suelo en Cancún y sus alrededores.
+
+```{r libraries}
+library(raster)
+library(sf)
+library(dplyr)
+library(purrr)
+
+# Colores usados para cada clase (en orden)
+cols_clases <- c("yellow", "green4", "blue", "red")
+```
+
+```{r data_import}
+# Imagen original
+rcl_min <- cbind(-440, 0, NA)
+rcl_max <- cbind(3000, 7738, NA)
+cancun_original <- brick("img/cancun_original.tif") %>%
+  reclassify(rcl = rcl_min, right = FALSE) %>%
+  reclassify(rcl = rcl_max)
+
+# Polígonos con los conjuntos de entrenamiento
+poligonos_clases <- function() {
+  # Archivo con las coordenadas de los polígonos
+  poligonos_clases <- read_sf("data/poligonos_clases.geojson")
+  
+  # División de los polígonos por muestras
+  clases <- list(ciudad1 = 0, ciudad2 = 1, selva1 = 2, selva2 = 3,
+                 mar1 = 4, mar2 = 5, laguna1 = 6, laguna2 = 7)
+  poligonos_por_muestra <- map(clases, ~ filter(poligonos_clases, id == .x)) %>%
+    map(st_coordinates)
+  
+  # Agregar los elementos al mapa
+  cols_muestras <- map(cols_clases, rep, 2) %>% flatten_chr()
+  map2(poligonos_por_muestra, cols_muestras, ~ polygon(.x, col = .y, border = NA))
+  legend("right", legend = c("Ciudad", "Selva", "Mar", "Laguna"),
+         fill = cols_clases, cex = 0.8)
+}
+
+# Clasificación con CART
+smileCart <- raster("img/clasificacion_smileCart.tif")
+
+# Clasificación con Naive Bayes
+smileNaiveBayes <- raster("img/clasificacion_smileNaiveBayes.tif")
+
+# Clasificación con Random Forest
+smileRandomForest <- raster("img/clasificacion_smileRandomForest.tif")
+
+# Clasificación con SVM
+libsvm <- raster("img/clasificacion_libsvm.tif")
+```
+
+# Imagen satelital de referencia
+
+Para llevar a cabo la clasificación del uso de suelo, primero es necesario obtener una imagen satelital clara de Cancún. Para ello, se toman las imágenes satelitales de Landsat 8 sobre Cancún durante el año 2019, se eligen las imágenes más claras (donde no haya nubes), y se calcula la mediana sobre todas las imágenes para obtener una sola imagen con estos valores.
+
+```{r original, fig.align="center", fig.height=3, fig.width=3.5}
+plotRGB(cancun_original, r = 4, g = 3, b = 2, scale = 3000)
+```
+
+\pagebreak
+# Definición de las clases
+
+Se toman como referencia 4 clases:
+
+  * Clase 0: Ciudad, marcada con color **amarillo**.
+  * Clase 1: Selva, marcada con color **verde**.
+  * Clase 2: Laguna, marcada con color **rojo**.
+  * Clase 3: Mar, marcada con color **azul**.
+
+Como es un problema de aprendizaje supervisado, es necesario calcular muestras de cada clase para usarlas como conjuntos de entrenamiento, y de esta forma poder entrenar modelos que permitan clasificar toda la imagen. Por ello, se calculan 2 polígonos de cada clase sobre la imagen cuyos pixeles se usan para crear dichos conjuntos.
+
+```{r original_polygons, fig.align="left", fig.height=3, fig.width=6}
+plotRGB(cancun_original, r = 4, g = 3, b = 2, scale = 3000, addfun = poligonos_clases)
+```
+
+\pagebreak
+# Resultados
+
+La clasificación se lleva a cabo usando 4 algoritmos disponibles en Google Earth Engine:
+
+  * Classification and Regression Tree o *CART*, con sus parámetros por defecto.
+  * Naive Bayes, con sus parámetros por defecto.
+  * Random Forest, con 10 árboles y el resto de sus parámetros por defecto.
+  * Support-Vector Machine o *SVM*, con sus parámetros por defecto.
+
+Los resultados obtenidos son los siguientes:
+
+## Clasificación con CART
+
+```{r smileCart, fig.align="center", fig.height=3, fig.width=8}
+row1 <- c(1, 1, 2, 2)
+layoutMatrix <- matrix(c(row1, row1), byrow = TRUE, nrow = 2)
+layout(layoutMatrix)
+plotRGB(cancun_original, r = 4, g = 3, b = 2, scale = 3000)
+plot(smileCart, col = cols_clases, axes = FALSE, box = FALSE,
+     breaks = c(-0.5, 0.5, 1.5, 2.5, 3.5), lab.breaks = rep("", 5),
+     legend.args = list(text = "Ciudad   Selva    Mar   Laguna", cex = 0.7,
+                        side = 4, line = 0.5))
+```
+
+En general, este algoritmo detecta de forma clara los patrones de cada clase. Sin embargo, no fue capaz de detectar zonas de ciudad pequeñas con selva a su alrededor, y algunas zonas dentro de la laguna las detecta como si fueran parte del mar. Algunas zonas dentro de la ciudad cercanas a la selva las detecta como si fueran parte del mar o la laguna, pero esto podría significar que en esas zonas existen cuerpos de agua.
+
+\pagebreak
+## Clasificación con Naive Bayes
+
+```{r smileNaiveBayes, fig.align="center", fig.height=3, fig.width=8}
+row1 <- c(1, 1, 2, 2)
+layoutMatrix <- matrix(c(row1, row1), byrow = TRUE, nrow = 2)
+layout(layoutMatrix)
+plotRGB(cancun_original, r = 4, g = 3, b = 2, scale = 3000)
+plot(smileNaiveBayes, col = cols_clases, axes = FALSE, box = FALSE,
+     breaks = c(-0.5, 0.5, 1.5, 2.5, 3.5), lab.breaks = rep("", 5),
+     legend.args = list(text = "Ciudad   Selva    Mar   Laguna", cex = 0.7,
+                        side = 4, line = 0.5))
+```
+
+Este algoritmo fue robusto detectando toda la zona de laguna, y detectando las partes de ciudad pequeña con selva a su alrededor. Algunas zonas de mar son detectadas como si fueran parte de la laguna, lo cual podría significar la presencia de manglar o vegetación de manglar en esas zonas. Algunas zonas dentro de la ciudad cercanas a la selva se detectan como si fueran parte de la laguna, pero esto podría significar que en esas zonas existen cuerpos de agua. Finalmente, algo extraño con este algoritmo es que la zona de playa de la Zona Hotelera es detectada como si fuera parte de la laguna.
+
+## Clasificación con Random Forest
+
+```{r smileRandomForest, fig.align="center", fig.height=3, fig.width=8}
+row1 <- c(1, 1, 2, 2)
+layoutMatrix <- matrix(c(row1, row1), byrow = TRUE, nrow = 2)
+layout(layoutMatrix)
+plotRGB(cancun_original, r = 4, g = 3, b = 2, scale = 3000)
+plot(smileRandomForest, col = cols_clases, axes = FALSE, box = FALSE,
+     breaks = c(-0.5, 0.5, 1.5, 2.5, 3.5), lab.breaks = rep("", 5),
+     legend.args = list(text = "Ciudad   Selva    Mar   Laguna", cex = 0.7,
+                        side = 4, line = 0.5))
+```
+
+Este algoritmo detecta bien toda la zona de ciudad, encontrando también las zonas de ciudad pequeñas cercanas a la selva. Pero algunas zonas de laguna las detecta como si fueran parte del mar, como con los resultados de CART.
+
+## Clasificación con SVM
+
+```{r libsvm, fig.align="center", fig.height=3, fig.width=8}
+row1 <- c(1, 1, 2, 2)
+layoutMatrix <- matrix(c(row1, row1), byrow = TRUE, nrow = 2)
+layout(layoutMatrix)
+plotRGB(cancun_original, r = 4, g = 3, b = 2, scale = 3000)
+plot(libsvm, col = cols_clases, axes = FALSE, box = FALSE,
+     breaks = c(-0.5, 0.5, 1.5, 2.5, 3.5), lab.breaks = rep("", 5),
+     legend.args = list(text = "Ciudad   Selva    Mar   Laguna", cex = 0.7,
+                        side = 4, line = 0.5))
+```
+
+Este algoritmo detecta muy bien todas las zonas, y también detecta bien algunas de las zonas pequeñas de ciudad cercanas a la selva. Algunas zonas de laguna las detecta como si fueran mar, pero son muy pequeñas.
+
+# Conclusiones
+
+En general, todo el proceso de análisis llevado a cabo fue sencillo gracias a Google Earth Engine, pues no solamente la manipulación y extracción de imágenes satelitales resulta ser muy rápida e intuitiva, sino que la implementación de los algoritmos de aprendizaje supervisado también es muy eficiente e intuitiva.
+
+Obtener una imagen clara de Cancún fue la clave para que los algoritmos detectaran muy bien las diferencias existentes entre las distintas clases. A mi parecer, el resultado más satisfactorio se obtuvo con Naive Bayes, el cual permitió detectar de mejor forma los patrones de cada clase.
