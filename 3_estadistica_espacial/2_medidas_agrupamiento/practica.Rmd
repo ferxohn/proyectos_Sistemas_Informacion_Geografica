@@ -1,0 +1,161 @@
+---
+title: "Práctica: Medidas de agrupamiento"
+author: 'Por: Fernando Gómez Perera'
+date: "11 de mayo del 2020"
+output: pdf_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+El objetivo de esta práctica es explorar los conceptos relacionados a las medidas de agrupamiento para resolver las preguntas planteadas como parte de la actividad.
+
+```{r libraries}
+pacman::p_load(tidyverse, sf, maptools, GISTools, spatstat, install = FALSE, update = FALSE)
+```
+
+## 1. Determina, de manera fundamentada, la expresión teórica de la función G para una distribución de puntos dispersos uniformemente (csr) con una densidad de $\lambda = \frac{N}{A}$.
+
+La función G proviene de los métodos del vecino más cercano (Nearest-Neighbor Methods), donde el objetivo es encontrar la distancia de un evento a su evento vecino más cercano (*event-to-event*). Se define de la siguiente forma:
+
+$$G(d) = \frac{\sum_i \texttt{I}(\min_{j\neq i} |x_i-x_j| \leq d)}{N} $$
+
+Donde $x_i$ y $x_j$ son eventos (puntos) distintos dentro del patrón de puntos, $d$ es la distancia sobre la que se evalúa la función, la cual corresponde al radio de un región circular $C_d$ de área $\pi d^2$ alrededor de $x_i$.
+
+Para determinar la distribución de eventos bajo csr se asume que para cualquier densidad de eventos $\lambda$ sobre una región amplia, los eventos (el patrón de puntos) se generan de un proceso aleatorio de Poisson.
+
+Considerando $x_i$ como un evento (punto) elegido de forma aleatoria del patrón de puntos csr, y $D$ como la distancia al vecino más cercano $x_j$, la distribución de $D$ se calcula considerando la región circular $C_d$.
+
+Por definición, la probabilidad de que $D$ sea al menos igual a $d$ es la probabilidad de que **no existe ningún otro punto dentro de la región circular $C_d$**. Considerando $C_d(x_i) = C_d - \{x_i\}$, esta probabilidad se calcula de la siguiente forma:
+
+$$P(D > d) = P(N[C_d(x_i)] = 0) = e^{-\lambda \pi d^2}$$
+
+Por ello, la probabilidad de encontrar otro vecino más cercano es el complemento de esta probabilidad:
+
+$$P(D <= d) = 1 - P(D > d) = 1 - e^{-\lambda \pi d^2}$$
+
+Que corresponde a la *función de distribución acumulada de Poisson* de referencia para la función G.
+
+\pagebreak
+## 2. Implementa la función G a partir de la definición y úsala para construir la gráfica para los eventos del conjunto $\texttt{breach}$. Compárala con la distribución teórica csr.
+
+El conjunto de datos `breach` ya ha sido explorado con anterioridad en otra tarea. Recordando, este conjunto de datos contiene la geolocalización de eventos denominados *breach of peace* o *alteración del orden* en la ciudad de New Haven, Connecticut, en EUA.
+
+```{r breach_dataset, fig.width=5, fig.height=5}
+data(newhaven)
+plot(breach@coords)
+```
+
+Para poder probar la implementación de la función G es necesario llevar a cabo algunas operaciones complementarias, como calcular la matriz de distancias y el valor de la intensidad de eventos o $\lambda = \frac{N}{A}$.
+
+```{r breach_pre}
+# Área que abarca la dispersión de los puntos.
+A <- st_as_sfc(breach) %>%
+  st_bbox() %>%
+  st_as_sfc() %>%
+  st_area() %>%
+  as.double()
+
+# Número de eventos.
+N <- nrow(breach@coords)
+
+# Cálculo de la intensidad de eventos o lambda.
+lambda <- N / A
+
+# Matriz de distancias.
+d <- dist(breach@coords) %>%
+  as.matrix()
+```
+
+La función G requiere solamente la distancia entre cada evento con su vecino más cercano ($\min_{j \neq i} |x_i-x_j|$). Por ello, se puede reducir la matriz de distancias a un vector donde cada elemento represente la distancia entre el evento $x_i$ al su vecino más cercano $x_j$, tal que $i = 1..N$.
+
+```{r breach_d_mins}
+# Vector de distancias entre cada evento i con su vecino más cercano j.
+d_mins <- vapply(as.data.frame(d),
+                 FUN = function(x) {
+                   x <- ifelse(x == 0, Inf, x)
+                   min(x)},
+                 FUN.VALUE = double(1))
+
+head(d_mins)
+```
+
+Usando un radio máximo de 1200, la implementación de la función G quedaría de la siguiente forma:
+
+```{r breach_G_manual}
+r_seq <- seq(0, 1200, 0.01)
+
+G_r <- c()
+
+for (r in r_seq) {
+  num <- sum(d_mins <= r)
+  G_r <- append(G_r, num / N)
+}
+
+plot(r_seq, G_r, type = "l")
+lines(r_seq, 1 - exp(-lambda * pi * r_seq^2), col = "red")
+```
+
+La gráfica que resulta de la distribución de eventos del conjunto de datos `breach` (en negro) es mayor a la gráfica de la distribución teórica csr. Por lo tanto, el resultado obtenido con la implementación manual de la función G indica que se forma grupos o clústeres de eventos dentro del conjunto de datos.
+
+## 3. Verifica tus resultados con los que se obtienen mediante la librería $\texttt{spatstat}$.
+
+Usando la implementación de la función G presente en la librería *spatstat* se obtiene lo siguiente:
+
+```{r breach_G_spatstat}
+point_pattern <- as.ppp(breach)
+gf <- Gest(point_pattern, correction = "border")
+plot(gf)
+```
+
+Este resultado es muy parecido al obtenido con la implementación manual de la función G. En ambos casos, la gráfica de la distribución de los eventos del conjunto de datos `breach` es mayor a la gráfica de la distribución teórica csr, lo cual indica que los eventos dentro del conjunto de datos se forman grupos o clústeres.
+
+## 4. Analiza el conjunto de datos de incidencia delictiva en San Diego (el conjunto se encuentra disponible en el fólder de "Procesado de capas ráster" en Schoology). Construye gráficas de las funciones K y G y aplica pruebas de hipótesis para verificar si los datos están agrupados. (Limita el análisis a los robos diurnos del año 2010.)
+
+Primero, es necesario importar el conjunto de datos de incidencias delictivas de San Diego durante 2010, filtrándolo para importar solamente los registros de robos diurnos. De igual forma, para facilitar la implementacion de las funciones K y G usando `spatstat`, las coordenadas del conjunto de datos se transforman al CRS usado por el conjunto de datos `breach` para obtener coordenadas proyectadas (`spatstat` requiere esto para convertirlo directamente a un objeto de tipo `ppp`).
+
+```{r sd_2010_import}
+sd_2010 <- read_sf("crime-incidents-2010.shapefile") %>%
+  filter(type == "ROBBERY", is_night == 0) %>%
+  st_transform(crs = st_crs(breach))
+
+plot(st_coordinates(sd_2010))
+```
+
+Evaluando las funciones K y G con `spatsat` se obtienen las siguientes gráficas:
+
+```{r sd_2010_K-F, fig.height=5, fig.width=10}
+sd_2010_ppp <- as.ppp(st_geometry(sd_2010))
+kf <- Kest(point_pattern, rmax = 1200, correction = "border")
+gf <- Gest(point_pattern, correction = "border")
+par(mfrow = c(1, 2))
+plot(kf)
+plot(gf)
+```
+
+Tomando un radio máximo de 1200, ambas gráficas tienen como resultados distribuciones de eventos mayores a las distribuciones de eventos csr. Por lo tanto, ambos resultados indican la existencia de grupos o clústeres de eventos dentro del conjunto de datos.
+
+Usando la técnica de *Desviación Máxima Absoluta* o *MAD*, se lleva a cabo una prueba de hipótesis sobre cada función para verificar de manera formal si efectivamente existen grupos dentro del conjunto de datos. Recordar que la hipótesis nula, $H_0$, afirma que el patrón de puntos está disperso uniformemente (no forma grupos).
+
+La prueba de hipótesis sobre la función K tiene el siguiente resultado:
+
+```{r sd_2010_MAD_K}
+mad.test(sd_2010_ppp, Kest)
+```
+
+El p-valor de esta prueba de hipótesis es de 0.01. Con un valor de significancia del 0.05, la hipótesis nula se rechaza, indicando la existencia de grupos dentro del conjunto de datos.
+
+```{r sd_2010_MAD_G}
+mad.test(sd_2010_ppp, Gest)
+```
+
+El p-valor de esta prueba de hipótesis es de 0.01. Con un valor de significancia del 0.05, la hipótesis nula se rechaza, indicando la existencia de grupos dentro del conjunto de datos.
+
+Por lo tanto, ambas pruebas de hipótesis nos permiten verificar que existen grupos dentro del conjunto de datos.
+
+# Referencias
+
+Anselin, L. (2016). *Point Pattern Analysis: Nearest Neighbor Statistics*. Recuperado el 11 de mayo del 2020. Disponible en: https://youtu.be/npWXTbRNLtM
+
+Smith, T. (s.f.). *Notebook for Spatial Data Analysis*. Documento recuperado el 11 de mayo del 2020. Disponible en: https://www.seas.upenn.edu/~ese502/NOTEBOOK/Part_I/3_Testing_Spatial_Randomness.pdf

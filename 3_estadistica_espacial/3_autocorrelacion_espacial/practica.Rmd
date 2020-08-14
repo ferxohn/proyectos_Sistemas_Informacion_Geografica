@@ -1,0 +1,168 @@
+---
+title: 'Práctica: Autocorrelación espacial'
+author: "Fernando Gómez Perera"
+date: "20 de mayo del 2020"
+output: pdf_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+El objetivo de esta práctica es aplicar los conceptos de autocorrelación espacial sobre los datos del censo INEGI 2010 en Cancún.
+
+```{r libraries}
+pacman::p_load(GISTools, spdep, tidyverse, readxl, sf, install = FALSE, update = FALSE)
+```
+
+## 1. Evalúa el porcentaje de viviendas de cada AGEB de Cancún con acceso a Internet.
+
+Para obtener el porcentaje de viviendas con acceso a internet, es necesario importar el conjunto de datos del censo INEGI 2010 filtrado para obtener las AGEB's de Cancún, y calculando el porcentaje por medio de la siguiente fórmula:
+
+$$PORC\_VPH\_INTER = \frac{VPH\_INTER}{VIVPAR\_HAB} * 100$$
+Donde $VIVPAR\_HAB$ equivale a las *viviendas particulares habitadas* y $VPH\_INTER$ equivale a las *viviendas particulares habitadas con acceso a internet* dentro del conjunto de datos.
+
+Además, este conjunto de datos se une con el shapefile de las AGEB's de Q. Roo para obtener los polígonos de cada AGEB en Cancún.
+
+```{r import_data, message=FALSE}
+# Importar al entorno los datos del censo de INEGI 2010
+cancun_INEGI2010 <-
+  read_xls("RESAGEBURB_23XLS10.xls") %>%
+  # Seleccionar solamente las columnas con información geográfica,
+  # viviendas particulares habitadas y viviendas particulares habitadas con acceso a internet
+  select(ENTIDAD:AGEB, VIVPAR_HAB, VPH_INTER) %>%
+  # Filtrar las AGEB's para quedarse con las de Cancún solamente
+  filter(MUN == "005", LOC == "0001", NOM_LOC == "Total AGEB urbana") %>%
+  # Cambios en las columnas seleccionadas
+  mutate(
+    # Las columnas referentes a las viviendas particulares habitadas se hacen numéricas 
+    VIVPAR_HAB = parse_number(VIVPAR_HAB, na = c("*", "N/D")),
+    VPH_INTER = parse_number(VPH_INTER, na = c("*", "N/D")),
+    # Se calcula el porcentaje de viviendas con acceso a internet por AGEB
+    PORC_VPH_INTER = VPH_INTER / VIVPAR_HAB * 100,
+    PORC_VPH_INTER = replace_na(PORC_VPH_INTER, 0))
+
+# Importar al entorno el shapefile de las AGEB's de QROO
+cancun_coords <- st_read("AGEBS_QROO", quiet = TRUE) %>%
+  # Seleccionar solamente la columna con la clave geográfica, y separarla
+  select(CVEGEO) %>%
+  separate(
+    col = CVEGEO,
+    into = c("ENTIDAD", "MUN", "LOC", "AGEB"),
+    sep = c(2, 5, 9)
+  ) %>%
+  # Filtrar las AGEB's para quedarse con las de Cancún solamente
+  filter(MUN == "005", LOC == "0001")
+  
+# Separar las AGEB's y los valores de viviendas particulares con acceso a internet
+agebs <- inner_join(cancun_coords, cancun_INEGI2010) %>%
+  st_geometry()
+p_vph_internet <- inner_join(cancun_coords, cancun_INEGI2010) %>%
+  pull(PORC_VPH_INTER)
+
+summary(p_vph_internet)
+```
+
+El resultado de cada porcentaje por AGEB se visualiza en el siguiente `choropleth`.
+
+```{r viz_p_vph_internet, fig.width=7, fig.height=5}
+# Visualizar el porcentaje de viviendas con acceso a internet
+shade <- auto.shading(p_vph_internet, n = 5, cols = brewer.pal(6, "Blues"))
+choropleth(agebs, v = p_vph_internet, shading = shade,
+           main = "Porcentaje de viviendas\ncon acceso a internet")
+choro.legend("bottomright", sh = shade, cex = 0.6)
+```
+
+## 2. Evalúa la media rezagada y construye un mapa para visualizarla.
+
+Con la media rezagada se puede comparar el valor de cada porcentaje obtenido de una AGEB con sus AGEB's vecinas, asignando un peso a cada vecindad entre AGEB's.
+
+Primero se calculan los vecinos de cada AGEB.
+
+```{r agebs_nb}
+# Obtener las AGEB's vecinas de cada AGEB
+nb <- poly2nb(agebs)
+nb
+```
+
+Después, se calculan los pesos de cada vecindad entre AGEB's.
+
+```{r agebs_weights}
+# Obtener los pesos de cada vecindad
+w_list <- nb2listw(nb)
+
+summary(w_list)
+```
+
+Finalmente, con esos 2 objetos se calcula la media rezagada y se visualiza en un mapa junto con los porcentajes originales
+
+```{r agebs_lagged_means, fig.width=10, fig.height=6}
+# Calcular las medias rezagadas y visualizarlas en un mapa
+z_bar_lagged <- lag.listw(w_list, p_vph_internet)
+
+par(mfrow = c(1, 2))
+choropleth(agebs, v = p_vph_internet, shading = shade,
+           main = "Porcentaje de viviendas\ncon acceso a internet")
+choropleth(agebs, z_bar_lagged, shading = shade, main = "Medias rezagadas")
+```
+
+Con este mapa se puede comparar los porcentajes originales con los resultados de las medias rezagadas. Con el mapa de las medias rezagadas es más fácil comparar una AGEB con sus AGEB's vecinas.
+
+## 3. Basándote en la matriz de pesos que se obtiene por medio de `spdep` (listw2mat), implementa tu evaluación del índice de Moran y prueba con el porcentaje de viviendas con acceso a internet en las AGEBS de Cancún.
+
+La fórmula del índice de Moran se define como:
+
+$$I = \frac{N}{\sum_{ij}w_{ij}}\frac{\sum_{ij}w_{ij}(z_i-\overline{z})(z_j-\overline{z})}{\sum_i(z_i-\overline{z})^2}$$
+
+Por ello, primero es necesario definir cada variable, y con cada una de ellas poder calcular manualmente el índice de Moran.
+
+```{r moran_manual}
+# Obtención de la matriz de pesos
+w <- listw2mat(w_list)
+
+# Observaciones
+z <- p_vph_internet
+
+# Número de observaciones
+N <- length(z)
+
+# Media de las observaciones
+z_bar <- mean(z)
+
+# Resta de cada observación con la media
+z_z_bar <- z - z_bar
+
+# Multiplicación de cada resultado de la resta consigo mismo y el resto de resultados
+# en forma de matriz
+z_z_bar_matrix <- flatten_dbl(map(1:length(z_z_bar), ~ z_z_bar * z_z_bar[.x])) %>%
+  matrix(ncol = N)
+
+# Cálculo del índice de Moran
+I_M <- N / sum(w) * sum(w * z_z_bar_matrix) / sum(z_z_bar^2)
+
+print(paste("Índice de Moran (manual):", I_M))
+```
+
+## 4. Compara tus resultados con los obtenidos con la librería `spdep`.
+
+La implementación del índice de Moran de la librería `spdep` arroja el siguiente resultado:
+
+```{r moran_spdep}
+moran.test(z, w_list)
+```
+
+El índice obtenido es igual al obtenido con la función manual. Sin embargo, la función `moran.test` arroja más estadísticos e información respecto al cálculo que se lleva a cabo.
+
+## 5. Interpreta los resultados obtenidos.
+
+Para interpretar el índice obtenido, primero se calcula su rango:
+
+```{r moran_range}
+M <- (w + t(w)) / 2
+
+e <- eigen(M)
+
+paste0("Rango: [", min(e$values), ", ", max(e$values), "]")
+```
+
+Con un p-valor casi de 0, se rechaza la la hipótesis nula de que *no existe correlación espacial*, y no se rechaza que *el porcentaje de viviendas con acceso a internet es un atributo que muestra autocorrelación espacial*, con un índice de Moran de 0.66 dentro de un rango que va de -0.9894 a 1.0381, donde el valor del índice es razonablemente alto (casi de 0.7).
