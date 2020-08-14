@@ -1,4 +1,4 @@
-# Práctica: Contaminación del Río Santiago
+# Práctica 4: Contaminación del Río Santiago
 # 
 # “La Comisión solicita a México que adopte las medidas necesarias para preservar
 # la vida, integridad personal y salud de los pobladores de las zonas hasta 5 kilómetros
@@ -16,7 +16,7 @@ library(sf)
 library(rgdal)
 library(dplyr)
 library(tmap)
-setwd("sistemas_informacion_geografica/buffer/")
+setwd("1_intro_sig_R/4_buffer/")
 
 # Mapa del país por división política
 # Fuente: INEGI

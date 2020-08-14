@@ -1,4 +1,4 @@
-# Práctica: Mapas de Calor
+# Práctica 3: Mapas de Calor
 # 
 # Objetivo de la práctica: Construir mapas de calor para mostrar la distribución
 # de incidentes delictivos en la ciudad de San Diego, California. Específicamente,
@@ -9,7 +9,7 @@ library(raster)
 library(spatialEco)
 library(dplyr)
 library(tmap)
-setwd("sistemas_informacion_geografica/heatmaps/")
+setwd("1_intro_sig_R/3_heatmaps/")
 
 # Mapa de San Diego
 # Fuente: City of San Diego Open Data Portal

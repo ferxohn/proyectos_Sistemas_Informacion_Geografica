@@ -1,4 +1,4 @@
-# Práctica: Tecnología OTEC
+# Práctica 2: Tecnología OTEC
 # 
 # Objetivo de la práctica: Localizar sitios en el Mar Caribe con potencial para
 # instalación de tecnología OTEC.
@@ -16,7 +16,7 @@ library(gdalUtils)
 library(dplyr)
 library(cartography)
 library(tmap)
-setwd("sistemas_informacion_geografica/tecnologia_OTEC/")
+setwd("1_intro_sig_R/2_tecnologia_OTEC/")
 
 # Polígonos estatales
 # Fuente: INEGI

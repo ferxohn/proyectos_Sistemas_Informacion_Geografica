@@ -1,4 +1,4 @@
-# Práctica: Incidencia Delictiva Nacional
+# Práctica 1: Incidencia Delictiva Nacional
 # 
 # Objetivo de la práctica: Construir mapas temáticos que muestren la incidencia
 # delictiva en los estados de la República Mexicana durante los últimos años.
@@ -9,7 +9,7 @@ library(dplyr)
 library(stringr)
 library(sf)
 library(cartography)
-setwd("sistemas_informacion_geografica/incidencia_delictiva_nacional/")
+setwd("1_intro_sig_R/1_incidencia_delictiva_nacional/")
 
 # Incidencia delictiva del fuero común
 # Fuente: Secretariado Ejecutivo del Sistema Nacional de Seguridad Pública
